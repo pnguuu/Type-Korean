@@ -323,42 +323,42 @@ export default function App() {
           exit={{ opacity: 0, y: -10 }}
           className="text-center"
         >
-          {/* Korean Text */}
+          {/* Korean Text - Jamo Granularity */}
           <div 
-            className="flex flex-wrap justify-center font-medium transition-all duration-300 cursor-text"
+            className="flex flex-wrap justify-center gap-x-8 gap-y-4 font-medium transition-all duration-300 cursor-text"
             style={{ fontSize: `${settings.krFontSize}px`, lineHeight: 1.2 }}
             onClick={focusInput}
           >
-            {currentWord.kr.split('').map((char, i) => {
-              const userChar = userInput[i];
-              let color = "#D1D5DB"; // Default Grey
-              
-              if (userChar !== undefined) {
-                if (userChar === char) {
-                  color = "#111827"; // Perfect Match (Black)
-                } else {
-                  // Decompose to check for jamo-prefix correctness
-                  const inputJamo = Hangul.disassemble(userChar).join('');
-                  const targetJamo = Hangul.disassemble(char).join('');
-                  
-                  if (targetJamo.startsWith(inputJamo)) {
-                    color = "#111827"; // Correct so far (Black)
-                  } else {
-                    color = "#EF4444"; // Incorrect (Red)
-                  }
-                }
-              }
-              
-              return (
-                <span
-                  key={i}
-                  style={{ color }}
-                  className="inline-block"
-                >
-                  {char}
-                </span>
-              );
-            })}
+            {useMemo(() => {
+              const targetSyllables = currentWord.kr.split('');
+              const userJamoFlat = Hangul.disassemble(userInput);
+              let globalJamoIndex = 0;
+
+              return targetSyllables.map((syllable, sIdx) => {
+                const targetJamos = Hangul.disassemble(syllable);
+                
+                return (
+                  <div key={sIdx} className="flex gap-x-1">
+                    {targetJamos.map((jamo, jIdx) => {
+                      const userJamo = userJamoFlat[globalJamoIndex];
+                      let color = "#D1D5DB"; // Default Grey
+                      
+                      if (userJamo !== undefined) {
+                        color = (userJamo === jamo) ? "#111827" : "#EF4444";
+                      }
+                      
+                      globalJamoIndex++;
+                      
+                      return (
+                        <span key={jIdx} style={{ color }}>
+                          {jamo}
+                        </span>
+                      );
+                    })}
+                  </div>
+                );
+              });
+            }, [currentWord.kr, userInput, settings.krFontSize])}
           </div>
 
           {/* Translation */}
