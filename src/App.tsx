@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useMemo, ChangeEvent, KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Settings, Volume2, X, RotateCcw, ChevronDown, List } from 'lucide-react';
+import * as Hangul from 'hangul-js';
 
 const WORD_LISTS: Record<string, { kr: string; cn: string }[]> = {
   '延世一二复习': [
@@ -328,21 +329,36 @@ export default function App() {
             style={{ fontSize: `${settings.krFontSize}px`, lineHeight: 1.2 }}
             onClick={focusInput}
           >
-            {currentWord.kr.split('').map((char, i) => (
-              <motion.span
-                key={i}
-                initial={{ scale: 1 }}
-                animate={{ 
-                  color: userInput.length > i 
-                    ? (userInput[i] === char ? "#111827" : "#EF4444") 
-                    : "#D1D5DB"
-                }}
-                transition={{ duration: 0.2 }}
-                className="inline-block"
-              >
-                {char}
-              </motion.span>
-            ))}
+            {currentWord.kr.split('').map((char, i) => {
+              const userChar = userInput[i];
+              let color = "#D1D5DB"; // Default Grey
+              
+              if (userChar !== undefined) {
+                if (userChar === char) {
+                  color = "#111827"; // Perfect Match (Black)
+                } else {
+                  // Decompose to check for jamo-prefix correctness
+                  const inputJamo = Hangul.disassemble(userChar).join('');
+                  const targetJamo = Hangul.disassemble(char).join('');
+                  
+                  if (targetJamo.startsWith(inputJamo)) {
+                    color = "#111827"; // Correct so far (Black)
+                  } else {
+                    color = "#EF4444"; // Incorrect (Red)
+                  }
+                }
+              }
+              
+              return (
+                <span
+                  key={i}
+                  style={{ color }}
+                  className="inline-block"
+                >
+                  {char}
+                </span>
+              );
+            })}
           </div>
 
           {/* Translation */}
