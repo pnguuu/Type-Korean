@@ -174,7 +174,7 @@ const WORD_LISTS: Record<string, { kr: string; cn: string }[]> = {
     { kr: '증세', cn: '症状' },
     { kr: '충혈', cn: '充血、眼睛（发红）' },
     { kr: '토하다', cn: '呕吐' },
-    { kr: '검시', cn: '检查，检验' },
+    { kr: '검사', cn: '检查，检验' },
     { kr: '주사', cn: '注射' },
     { kr: '연고', cn: '软膏' },
     { kr: '수면제', cn: '安眠药［睡眠剂］' },
@@ -227,25 +227,33 @@ export default function App() {
     localStorage.setItem('hantyper_settings', JSON.stringify(settings));
   }, [settings]);
 
-  // Keep input focused for mobile keyboard
+  // Keep input focused for word area click
   useEffect(() => {
     const focus = () => inputRef.current?.focus();
-    focus();
-    window.addEventListener('click', focus);
-    return () => window.removeEventListener('click', focus);
+    // No longer globally focusing on window click
+    return () => {};
   }, []);
+
+  const focusInput = () => {
+    inputRef.current?.focus();
+  };
 
   // --- Handlers ---
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setUserInput(value);
+    
+    // Only update if it's a prefix of the target word to prevent "showing" errors
+    // and effectively "don't show current input if wrong"
+    if (currentWord.kr.startsWith(value)) {
+      setUserInput(value);
 
-    // If perfectly matched, show success state briefly then next
-    if (value === currentWord.kr) {
-      setIsSuccess(true);
-      setTimeout(() => {
-        nextWord();
-      }, 300);
+      // If perfectly matched, show success state briefly then next
+      if (value === currentWord.kr) {
+        setIsSuccess(true);
+        setTimeout(() => {
+          nextWord();
+        }, 300);
+      }
     }
   };
 
@@ -294,45 +302,8 @@ export default function App() {
 
       {/* Top Bar */}
       <div className="absolute top-0 w-full p-6 flex justify-between items-center z-20">
-        <div className="relative">
-          <button
-            onClick={() => setIsListSelectorOpen(!isListSelectorOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 text-gray-700 active:scale-95 transition-all border border-gray-100"
-          >
-            <List size={16} className="text-gray-400" />
-            <span className="text-sm font-medium">{currentListKey}</span>
-            <ChevronDown size={14} className={`text-gray-400 transition-transform ${isListSelectorOpen ? 'rotate-180' : ''}`} />
-          </button>
-          
-          <AnimatePresence>
-            {isListSelectorOpen && (
-              <>
-                <motion.div 
-                   initial={{ opacity: 0 }}
-                   animate={{ opacity: 1 }}
-                   exit={{ opacity: 0 }}
-                   className="fixed inset-0 z-30" 
-                   onClick={() => setIsListSelectorOpen(false)} 
-                />
-                <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute top-full left-0 mt-2 w-40 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-40 overflow-hidden"
-                >
-                  {Object.keys(WORD_LISTS).map((key) => (
-                    <button
-                      key={key}
-                      onClick={() => handleListChange(key)}
-                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${currentListKey === key ? 'text-black font-bold bg-gray-50' : 'text-gray-600 hover:bg-gray-50'}`}
-                    >
-                      {key}
-                    </button>
-                  ))}
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+        <div className="text-[10px] font-bold tracking-widest text-gray-300 uppercase">
+          {wordIndex + 1} / {currentList.length}
         </div>
 
         <div className="flex items-center gap-4">
@@ -358,16 +329,16 @@ export default function App() {
         >
           {/* Korean Text */}
           <div 
-            className="flex flex-wrap justify-center font-medium transition-all duration-300"
+            className="flex flex-wrap justify-center font-medium transition-all duration-300 cursor-text"
             style={{ fontSize: `${settings.krFontSize}px`, lineHeight: 1.2 }}
+            onClick={focusInput}
           >
             {currentWord.kr.split('').map((char, i) => (
               <motion.span
                 key={i}
                 initial={{ scale: 1 }}
                 animate={{ 
-                  scale: (userInput.length - 1 === i) ? [1, 1.2, 1] : 1,
-                  color: userInput.length > i ? (userInput[i] === char ? "#111827" : "#EF4444") : "#D1D5DB"
+                  color: userInput.length > i && userInput[i] === char ? "#111827" : "#D1D5DB"
                 }}
                 transition={{ duration: 0.2 }}
                 className="inline-block"
@@ -405,19 +376,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="absolute bottom-16 w-full px-12 max-w-sm flex flex-col items-center">
-        <span className="text-[10px] font-bold tracking-widest text-gray-300 uppercase mb-3">
-          {wordIndex + 1} / {currentList.length}
-        </span>
-        <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-black/80"
-            animate={{ width: `${progress}%` }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          />
-        </div>
-      </div>
+      {/* Progress Counter Removed from bottom */}
 
       {/* Settings Modal */}
       <AnimatePresence>
@@ -436,8 +395,8 @@ export default function App() {
               className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-8 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-xl font-bold text-gray-900 font-sans">界面设置</h2>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-gray-900 font-sans">设置</h2>
                 <button
                   onClick={() => setIsSettingsOpen(false)}
                   className="p-2 text-gray-400 hover:text-gray-600"
@@ -446,11 +405,46 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="space-y-8">
+              <div className="space-y-5">
+                {/* Word List Selection */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">当前词库</label>
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsListSelectorOpen(!isListSelectorOpen)}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-gray-50 text-gray-700 transition-all border border-gray-100 active:scale-[0.98]"
+                    >
+                      <span className="text-sm font-medium">{currentListKey}</span>
+                      <ChevronDown size={16} className={`text-gray-400 transition-transform ${isListSelectorOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    <AnimatePresence>
+                      {isListSelectorOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="absolute bottom-full left-0 mb-2 w-full bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 overflow-hidden"
+                        >
+                          {Object.keys(WORD_LISTS).map((key) => (
+                            <button
+                              key={key}
+                              onClick={() => handleListChange(key)}
+                              className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${currentListKey === key ? 'text-black font-bold bg-gray-50' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                              {key}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+
                 {/* KR Font Size */}
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium text-gray-500">韩文字号</label>
+                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">韩文字号</label>
                     <span className="text-sm font-bold text-gray-900">{settings.krFontSize}px</span>
                   </div>
                   <input
@@ -464,9 +458,9 @@ export default function App() {
                 </div>
 
                 {/* CN Font Size */}
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium text-gray-500">释义字号</label>
+                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">释义字号</label>
                     <span className="text-sm font-bold text-gray-900">{settings.cnFontSize}px</span>
                   </div>
                   <input
@@ -479,38 +473,40 @@ export default function App() {
                   />
                 </div>
 
-                {/* Show/Hide Translation */}
-                <div className="flex justify-between items-center py-2">
-                  <label className="text-sm font-medium text-gray-500">显示中文释义</label>
-                  <button
-                    onClick={() => setSettings({ ...settings, showTranslation: !settings.showTranslation })}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${settings.showTranslation ? 'bg-black' : 'bg-gray-200'}`}
-                  >
-                    <motion.div
-                      animate={{ x: settings.showTranslation ? 24 : 4 }}
-                      className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
-                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                    />
-                  </button>
-                </div>
+                <div className="flex flex-col gap-2 pt-2">
+                  {/* Show/Hide Translation */}
+                  <div className="flex justify-between items-center py-1">
+                    <label className="text-sm font-medium text-gray-600">显示中文释义</label>
+                    <button
+                      onClick={() => setSettings({ ...settings, showTranslation: !settings.showTranslation })}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${settings.showTranslation ? 'bg-black' : 'bg-gray-200'}`}
+                    >
+                      <motion.div
+                        animate={{ x: settings.showTranslation ? 24 : 4 }}
+                        className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      />
+                    </button>
+                  </div>
 
-                {/* Shuffle Option */}
-                <div className="flex justify-between items-center py-2">
-                  <label className="text-sm font-medium text-gray-500">乱序</label>
-                  <button
-                    onClick={() => {
-                        setSettings({ ...settings, isShuffle: !settings.isShuffle });
-                        setWordIndex(0);
-                        setUserInput('');
-                    }}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${settings.isShuffle ? 'bg-black' : 'bg-gray-200'}`}
-                  >
-                    <motion.div
-                      animate={{ x: settings.isShuffle ? 24 : 4 }}
-                      className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
-                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                    />
-                  </button>
+                  {/* Shuffle Option */}
+                  <div className="flex justify-between items-center py-1">
+                    <label className="text-sm font-medium text-gray-600">乱序</label>
+                    <button
+                      onClick={() => {
+                          setSettings({ ...settings, isShuffle: !settings.isShuffle });
+                          setWordIndex(0);
+                          setUserInput('');
+                      }}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${settings.isShuffle ? 'bg-black' : 'bg-gray-200'}`}
+                    >
+                      <motion.div
+                        animate={{ x: settings.isShuffle ? 24 : 4 }}
+                        className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      />
+                    </button>
+                  </div>
                 </div>
               </div>
 
