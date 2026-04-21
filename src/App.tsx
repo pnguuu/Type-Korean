@@ -241,19 +241,14 @@ export default function App() {
   // --- Handlers ---
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    
-    // Only update if it's a prefix of the target word to prevent "showing" errors
-    // and effectively "don't show current input if wrong"
-    if (currentWord.kr.startsWith(value)) {
-      setUserInput(value);
+    setUserInput(value);
 
-      // If perfectly matched, show success state briefly then next
-      if (value === currentWord.kr) {
-        setIsSuccess(true);
-        setTimeout(() => {
-          nextWord();
-        }, 300);
-      }
+    // If perfectly matched, show success state briefly then next
+    if (value === currentWord.kr) {
+      setIsSuccess(true);
+      setTimeout(() => {
+        nextWord();
+      }, 300);
     }
   };
 
@@ -338,7 +333,9 @@ export default function App() {
                 key={i}
                 initial={{ scale: 1 }}
                 animate={{ 
-                  color: userInput.length > i && userInput[i] === char ? "#111827" : "#D1D5DB"
+                  color: userInput.length > i 
+                    ? (userInput[i] === char ? "#111827" : "#EF4444") 
+                    : "#D1D5DB"
                 }}
                 transition={{ duration: 0.2 }}
                 className="inline-block"
